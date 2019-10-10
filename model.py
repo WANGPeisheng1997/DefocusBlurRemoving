@@ -76,11 +76,11 @@ if __name__ == '__main__':
     features = torch.FloatTensor(np2)
     # features = torch.ones(100, 2, 224, 224)
     # print(features)
-    loss = nn.CrossEntropyLoss(size_average=True)
+    loss_f = nn.CrossEntropyLoss()
     # target = torch.ones(100, 224, 224, dtype=torch.long)
     # print(target)
     # print(float(target[0][0][0]))
-    res = loss(features, target)
+    res = loss_f(features, target)
     print(float(res))
 
 '''

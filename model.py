@@ -55,12 +55,12 @@ class DetectionNet(nn.Module):
 
 
 if __name__ == '__main__':
-    # net = DetectionNet()
+    net = DetectionNet()
     # mini-batches of 3-channel RGB images of shape (3 x H x W), where H and W are expected to be at least 224.
     # The images have to be loaded in to a range of [0, 1] and then normalized using mean = [0.485, 0.456, 0.406] and std = [0.229, 0.224, 0.225]
-    # features = net.forward(torch.randn(8, 3, 224, 224))
-    # print(features)
-    # print(features.size())  # 8 * 2 * 224 * 224
+    features = net.forward(torch.randn(8, 3, 224, 224))
+    print(features)
+    print(features.size())  # 8 * 2 * 224 * 224
 
     # features = torch.ones(2, 2, 224, 224, requires_grad=True)
     # loss = nn.CrossEntropyLoss()
@@ -69,19 +69,6 @@ if __name__ == '__main__':
     # output = loss(features, target)
     # print(output)
     # output.backward()
-
-    np1 = np.ones((100, 224, 224), dtype=np.int32)
-    target = torch.LongTensor(np1)
-    np2 = np.ones((100, 2, 224, 224), dtype=np.float64)
-    features = torch.FloatTensor(np2)
-    # features = torch.ones(100, 2, 224, 224)
-    # print(features)
-    loss_f = nn.CrossEntropyLoss()
-    # target = torch.ones(100, 224, 224, dtype=torch.long)
-    # print(target)
-    # print(float(target[0][0][0]))
-    res = loss_f(features, target)
-    print(float(res))
 
 '''
 VGG(

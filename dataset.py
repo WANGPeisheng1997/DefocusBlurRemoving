@@ -1,11 +1,7 @@
-from torch.utils.data import Dataset, DataLoader
-from torch import optim
-from torch import nn
-import torch
+from torch.utils.data import Dataset
 from PIL import Image
 import os
 from torchvision import transforms
-from model import DetectionNet
 
 
 class DefocusDataset(Dataset):
@@ -34,25 +30,6 @@ class DefocusDataset(Dataset):
 
     def __len__(self):
         return 703
-
-
-path = "data"
-defocus_blur_dataset = DefocusDataset(path)
-defocus_blur_dataloader = DataLoader(defocus_blur_dataset, batch_size=8, num_workers=2, shuffle=True, pin_memory=True)
-
-if __name__ == '__main__':
-    model = DetectionNet()
-    model.train()
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    for batch_idx, (data, target) in enumerate(defocus_blur_dataloader):
-        optimizer.zero_grad()
-        output = model(data)
-        criterion = nn.CrossEntropyLoss()
-        loss = criterion(output, target)
-        loss.backward()
-        optimizer.step()
-
-        print(loss)
 
 
 

@@ -32,6 +32,7 @@ def main():
                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                                     ])
     data = transform(Image.open("test.jpg"))
+    data = data.view(1, -1, -1, -1).to(device)
     model_structure = DetectionNet().to(device)
     model = load_network(args, model_structure)
     model = model.to(device)

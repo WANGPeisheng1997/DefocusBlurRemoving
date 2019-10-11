@@ -18,7 +18,7 @@ def main():
                         help='disables CUDA training')
     parser.add_argument('--gpu-id', type=int, default=0, metavar='N',
                         help='id of the gpu')
-    parser.add_argument('--which-epoch', type=int, default=10, metavar='N',
+    parser.add_argument('--which-epoch', type=int, default=15, metavar='N',
                         help='which model to use')
     # parser.add_argument('--save-model', action='store_true', default=False,
     #                     help='For Saving the current Model')
@@ -31,14 +31,24 @@ def main():
                                     transforms.ToTensor(),
                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                                     ])
-    data = transform(Image.open("test.jpg"))
+    image = Image.open("test.jpg")
+    width, height = image.size
+    ratio = height / width
+    new_height = 224
+    new_width = int((new_height / ratio) // 32 * 32)
+    image_resize = image.resize((new_width, new_height))
+    data = transform(image_resize)
     data = data.unsqueeze(0).to(device)
     model_structure = DetectionNet().to(device)
     model = load_network(args, model_structure)
     model = model.to(device)
     model = model.eval()
-    output = model(data)
-    print(output)
+    output = model(data).squeeze()
+    result = torch.argmax(output, dim=0)
+    result = result.unsqueeze(0).float()
+    detection = transforms.ToPILImage()(result.cpu())
+    detection = detection.resize(image.size)
+    detection.save('detect.jpg')
 
 
 if __name__ == '__main__':

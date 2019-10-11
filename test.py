@@ -1,17 +1,44 @@
-from torch import nn
+import argparse
 import torch
+from model import DetectionNet
+import os
+from torchvision import transforms
+from PIL import Image
 
 
-def test(args, model, device, defocus_blur_dataloader):
-    model.eval()
-    test_loss = 0
-    with torch.no_grad():
-        for data, target in defocus_blur_dataloader:
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            criterion = nn.CrossEntropyLoss()
-            loss = criterion(output, target).item()
-            test_loss += float(loss) * data.shape[0]
+def load_network(args, network):
+    save_path = os.path.join('detect_%d.pt' % args.which_epoch)
+    network.load_state_dict(torch.load(save_path))
+    return network
 
-    test_loss /= len(defocus_blur_dataloader.dataset)
-    print('Test set: Average loss: {:.4f}\n'.format(test_loss))
+
+def main():
+    parser = argparse.ArgumentParser(description='Defocus Blur Removing')
+    parser.add_argument('--cpu', action='store_true', default=False,
+                        help='disables CUDA training')
+    parser.add_argument('--gpu-id', type=int, default=0, metavar='N',
+                        help='id of the gpu')
+    parser.add_argument('--which-epoch', type=int, default=10, metavar='N',
+                        help='which model to use')
+    # parser.add_argument('--save-model', action='store_true', default=False,
+    #                     help='For Saving the current Model')
+
+    args = parser.parse_args()
+    use_cuda = not args.cpu and torch.cuda.is_available()
+    device = torch.device("cuda:%d" % args.gpu_id if use_cuda else "cpu")
+
+    transform = transforms.Compose([transforms.Resize(224),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                                    ])
+    data = transform(Image.open("test.jpg"))
+    model_structure = DetectionNet().to(device)
+    model = load_network(args, model_structure)
+    model = model.to(device)
+    model = model.eval()
+    output = model(data)
+    print(output)
+
+
+if __name__ == '__main__':
+    main()

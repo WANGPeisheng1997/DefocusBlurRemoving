@@ -58,5 +58,3 @@ class DefocusTestDataset(Dataset):
 
     def __len__(self):
         return 204
-
-

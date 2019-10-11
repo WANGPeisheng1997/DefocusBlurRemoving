@@ -22,8 +22,8 @@ class DefocusTrainDataset(Dataset):
         # index 0 - 499
         # out_of_focus0001-0500
         img_name = "out_of_focus%04d" % (index + 1)
-        img = Image.open(os.path.join(self._root, "images", img_name + ".jpg"))
-        gt = Image.open(os.path.join(self._root, "gt", img_name + ".png"))
+        img = Image.open(os.path.join(self._root, "train", "images", img_name + ".jpg"))
+        gt = Image.open(os.path.join(self._root, "train", "gt", img_name + ".png"))
         img = self._transform_img(img)
         gt = self._transform_gt(gt)[0].long()
         return img, gt
@@ -50,8 +50,8 @@ class DefocusTestDataset(Dataset):
         # index 0 - 203
         # out_of_focus0501-0704
         img_name = "out_of_focus%04d" % (index + 501)
-        img = Image.open(os.path.join(self._root, "images", img_name + ".jpg"))
-        gt = Image.open(os.path.join(self._root, "gt", img_name + ".png"))
+        img = Image.open(os.path.join(self._root, "test", "images", img_name + ".jpg"))
+        gt = Image.open(os.path.join(self._root, "test", "gt", img_name + ".png"))
         img = self._transform_img(img)
         gt = self._transform_gt(gt)[0].long()
         return img, gt

@@ -17,4 +17,4 @@ def train(args, model, device, defocus_blur_dataloader, optimizer, epoch):
         optimizer.step()
     time_elapsed = time.time() - train_start_time
     print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / len(defocus_blur_dataloader.dataset)))
-    print('Training complete in {:.0f}m {:.0f}s\n'.format(time_elapsed // 60, time_elapsed % 60))
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))

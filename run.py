@@ -35,7 +35,7 @@ def main():
     args = parser.parse_args()
     use_cuda = not args.cpu and torch.cuda.is_available()
     device = torch.device("cuda:%d" % args.gpu_id if use_cuda else "cpu")
-    kwargs = {'num_workers': 2, 'pin_memory': True} if use_cuda else {}
+    kwargs = {'num_workers': 4, 'pin_memory': True} if use_cuda else {}
 
     path = "data"
     train_dataset = DefocusTrainDataset(path)

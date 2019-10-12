@@ -6,6 +6,7 @@ from dataset import DefocusTrainDataset, DefocusTestDataset
 from model import DetectionNet
 from torch import optim
 import time
+import os
 
 
 def train(args, model, device, defocus_blur_dataloader, optimizer, epoch):

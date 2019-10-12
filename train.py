@@ -62,6 +62,7 @@ def main():
                         help='how many batches to wait before logging training status')
     parser.add_argument('--saving-interval', type=int, default=5, metavar='N',
                         help='how many epochs to wait before saving model')
+    parser.add_argument('--saving-path', type=str, default='models', help='where to save the model')
     # parser.add_argument('--save-model', action='store_true', default=False,
     #                     help='For Saving the current Model')
 
@@ -82,7 +83,7 @@ def main():
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, train_dataloader, optimizer, epoch)
         if epoch % args.saving_interval == 0:
-            torch.save(model.state_dict(), "detect_%d.pt" % epoch)
+            torch.save(model.state_dict(), os.path.join(args.saving_path, "detect_%d.pt" % epoch))
         test(args, model, device, test_dataloader)
 
 

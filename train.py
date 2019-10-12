@@ -30,6 +30,7 @@ def train(args, model, device, defocus_blur_dataloader, optimizer, epoch):
 def test(args, model, device, defocus_blur_dataloader):
     model.eval()
     test_loss = 0
+    MAE = 0
     with torch.no_grad():
         for data, target in defocus_blur_dataloader:
             data, target = data.to(device), target.to(device)
@@ -37,9 +38,11 @@ def test(args, model, device, defocus_blur_dataloader):
             criterion = nn.CrossEntropyLoss()
             loss = criterion(output, target).item()
             test_loss += float(loss) * data.shape[0]
-
+            output = torch.argmax(output, dim=1)
+            MAE += float(nn.L1Loss()(output, target).item()) * data.shape[0]
     test_loss /= len(defocus_blur_dataloader.dataset)
-    print('Test set: Average loss: {:.4f}\n'.format(test_loss))
+    MAE /= len(defocus_blur_dataloader.dataset)
+    print('Test set: Cross-entropy loss: {:.4f}, MAE: {:.4f}\n'.format(test_loss, MAE))
 
 
 def main():

@@ -60,7 +60,7 @@ def main():
         os.makedirs(args.output_path)
     img_names = sorted(os.listdir(args.input_path))
     for img_name in img_names:
-        image = Image.open(os.path.join(args.input_path, args.img_name))
+        image = Image.open(os.path.join(args.input_path, img_name))
         detection = detect_defocus_region(args, image, device, transform)
         tmp = img_name.split('.')
         tmp[-2] = tmp[-2] + '-dt'

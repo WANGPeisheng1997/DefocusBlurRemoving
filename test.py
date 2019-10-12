@@ -7,7 +7,7 @@ from PIL import Image
 
 
 def load_network(args, network):
-    save_path = os.path.join('detect_%d.pt' % args.which_epoch)
+    save_path = os.path.join(args.saving_path, 'detect_%d.pt' % args.which_epoch)
     network.load_state_dict(torch.load(save_path))
     return network
 
@@ -46,6 +46,7 @@ def main():
                         help='which model to use')
     parser.add_argument('--input-path', type=str, default='defocus_images', help='test folder')
     parser.add_argument('--output-path', type=str, default='deblur_images', help='result folder')
+    parser.add_argument('--saving-path', type=str, default='models', help='where is the model')
 
     args = parser.parse_args()
     use_cuda = not args.cpu and torch.cuda.is_available()

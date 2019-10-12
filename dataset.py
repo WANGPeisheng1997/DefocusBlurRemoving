@@ -2,20 +2,29 @@ from torch.utils.data import Dataset
 from PIL import Image
 import os
 from torchvision import transforms
+import random
+
+
+def random_crop(img, gt, size):
+    width, height = img.size
+    max_x = width - size
+    max_y = height - size
+    x = random.randint(0, max_x)
+    y = random.randint(0, max_y)
+    region = (x, y, x + size, y + size)
+    img = img.crop(region)
+    gt = gt.crop(region)
+    return img, gt
 
 
 class DefocusTrainDataset(Dataset):
 
     def __init__(self, path):
         self._root = path
-        self._transform_img = transforms.Compose([transforms.Resize(256),
-                                                  transforms.CenterCrop(224),
-                                                  transforms.ToTensor(),
+        self._transform_img = transforms.Compose([transforms.ToTensor(),
                                                   transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                                                   ])
-        self._transform_gt = transforms.Compose([transforms.Resize(256),
-                                                 transforms.CenterCrop(224),
-                                                 transforms.ToTensor(),
+        self._transform_gt = transforms.Compose([transforms.ToTensor()
                                                  ])
 
     def __getitem__(self, index):
@@ -24,6 +33,9 @@ class DefocusTrainDataset(Dataset):
         img_name = "out_of_focus%04d" % (index + 1)
         img = Image.open(os.path.join(self._root, "train", "images", img_name + ".jpg"))
         gt = Image.open(os.path.join(self._root, "train", "gt", img_name + ".png"))
+        img = transforms.Resize(256)(img)
+        gt = transforms.Resize(256)(gt)
+        img, gt = random_crop(img, gt, 224)
         img = self._transform_img(img)
         gt = self._transform_gt(gt)[0].long()
         return img, gt

@@ -6,9 +6,9 @@ from torchvision import transforms
 from PIL import Image
 
 
-def load_network(args, network):
+def load_network(args, network, device):
     save_path = os.path.join(args.saving_path, 'detect_%d.pt' % args.which_epoch)
-    network.load_state_dict(torch.load(save_path))
+    network.load_state_dict(torch.load(save_path, map_location=device))
     return network
 
 
@@ -25,7 +25,7 @@ def detect_defocus_region(args, image, device, transform):
     data = transform(image_resize)
     data = data.unsqueeze(0).to(device)
     model_structure = DetectionNet().to(device)
-    model = load_network(args, model_structure)
+    model = load_network(args, model_structure, device)
     model = model.to(device)
     model = model.eval()
     output = model(data).squeeze()
@@ -36,10 +36,31 @@ def detect_defocus_region(args, image, device, transform):
     return detection
 
 
+def detect_defocus_region_resize(args, image, device):
+    transform = transforms.Compose([transforms.Resize((224, 224)),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                                    ])
+    data = transform(image)
+    data = data.unsqueeze(0).to(device)
+    with torch.no_grad():
+        model_structure = DetectionNet().to(device)
+        model = load_network(args, model_structure, device)
+        model = model.to(device)
+        model = model.eval()
+        output = model(data).squeeze()
+        result = torch.softmax(output, dim=0)
+        result = result[0].float()
+        detection = transforms.ToPILImage()(result.cpu())
+    return detection
+
+
 def main():
     parser = argparse.ArgumentParser(description='Defocus Blur Removing')
     parser.add_argument('--cpu', action='store_true', default=False,
                         help='disables CUDA training')
+    parser.add_argument('--resize', action='store_true', default=False,
+                        help='directly resize to 224*224')
     parser.add_argument('--gpu-id', type=int, default=0, metavar='N',
                         help='id of the gpu')
     parser.add_argument('--which-epoch', type=int, default=15, metavar='N',
@@ -62,7 +83,10 @@ def main():
     img_names = sorted(os.listdir(args.input_path))
     for img_name in img_names:
         image = Image.open(os.path.join(args.input_path, img_name))
-        detection = detect_defocus_region(args, image, device, transform)
+        if args.resize:
+            detection = detect_defocus_region_resize(args, image, device)
+        else:
+            detection = detect_defocus_region(args, image, device, transform)
         tmp = img_name.split('.')
         tmp[-2] = tmp[-2] + '-dt'
         output_name = '.'.join(tmp)

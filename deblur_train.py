@@ -8,6 +8,7 @@ from torch import optim
 import time
 import os
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def train(args, model, device, defocus_blur_dataloader, optimizer, epoch):
     train_start_time = time.time()

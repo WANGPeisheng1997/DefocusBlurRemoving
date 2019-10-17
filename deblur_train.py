@@ -61,7 +61,7 @@ def main():
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, train_dataloader, optimizer, epoch)
         if epoch % args.saving_interval == 0:
-            torch.save(model.state_dict(), os.path.join(args.saving_path, "detect_%d.pt" % epoch))
+            torch.save(model.state_dict(), os.path.join(args.saving_path, "remove_%d.pt" % epoch))
 
 
 if __name__ == '__main__':

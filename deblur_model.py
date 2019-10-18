@@ -3,7 +3,7 @@ from torch import nn
 
 
 class ResnetBlock(torch.nn.Module):
-    def __init__(self, num_filter, kernel_size=3, stride=1, padding=1, bias=True, activation=None, norm=None):
+    def __init__(self, num_filter, kernel_size=3, stride=1, padding=1, bias=True, activation="relu", norm=None):
         super(ResnetBlock, self).__init__()
         self.conv1 = torch.nn.Conv2d(num_filter, num_filter, kernel_size, stride, padding, bias=bias)
         self.conv2 = torch.nn.Conv2d(num_filter, num_filter, kernel_size, stride, padding, bias=bias)
@@ -87,6 +87,11 @@ class DeblurNet(nn.Module):
         self.down_1 = DownBlock(32)
         self.down_2 = DownBlock(64)
         self.down_3 = DownBlock(128)
+        self.res_1 = ResnetBlock(256)
+        self.res_2 = ResnetBlock(256)
+        self.res_3 = ResnetBlock(256)
+        self.res_4 = ResnetBlock(256)
+        self.res_5 = ResnetBlock(256)
         self.up_1 = UpBlock(256)
         self.up_2 = UpBlock(128)
         self.up_3 = UpBlock(64)
@@ -97,7 +102,12 @@ class DeblurNet(nn.Module):
         d1 = self.down_1(c)
         d2 = self.down_2(d1)
         d3 = self.down_3(d2)
-        u1 = self.up_1(d3)
+        a1 = self.res_1(d3)
+        a2 = self.res_2(a1)
+        a3 = self.res_3(a2)
+        a4 = self.res_4(a3)
+        a5 = self.res_5(a4)
+        u1 = self.up_1(a5)
         r1 = u1 + d2
         u2 = self.up_2(r1)
         r2 = u2 + d1
@@ -106,6 +116,9 @@ class DeblurNet(nn.Module):
         out = self.conv_2(r3)
         return out
 
+from PIL import Image
+from torchvision import transforms
+from torch import nn
 
 if __name__ == '__main__':
     net = DeblurNet()
@@ -114,3 +127,11 @@ if __name__ == '__main__':
     # The images have to be loaded in to a range of [0, 1] and then normalized using mean = [0.485, 0.456, 0.406] and std = [0.229, 0.224, 0.225]
     features = net.forward(torch.randn(8, 3, 224, 224))
     print(features.size())  # 8 * 3 * 224 * 224
+    # image1 = Image.open("test.png")
+    # image2 = Image.open("data/HighResolutionImage/0002.png")
+    # tensor1 = transforms.ToTensor()(image1)
+    # tensor2 = transforms.ToTensor()(image2)
+    # print(tensor1)
+    # print(tensor2)
+    # crit = nn.MSELoss()
+    # print(crit(tensor1, tensor2))

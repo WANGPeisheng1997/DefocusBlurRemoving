@@ -5,8 +5,6 @@ import os
 from torchvision import transforms
 from PIL import Image
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
 
 def load_network(args, network, device):
     save_path = os.path.join(args.saving_path, 'remove_%d.pt' % args.which_epoch)
@@ -43,8 +41,9 @@ def main():
     parser.add_argument('--saving-path', type=str, default='models', help='where is the model')
 
     args = parser.parse_args()
+    os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu_id
     use_cuda = not args.cpu and torch.cuda.is_available()
-    device = torch.device("cuda:%d" % args.gpu_id if use_cuda else "cpu")
+    device = torch.device("cuda:0" if use_cuda else "cpu")
 
     transform = transforms.Compose([transforms.Resize((1024, 1536)),
                                     transforms.ToTensor(),
@@ -56,7 +55,7 @@ def main():
     for img_name in img_names:
         image = Image.open(os.path.join(args.input_path, img_name))
         deblur = deblur_defocus_image(args, image, device, transform)
-        deblur.resize(image.size)
+        deblur = deblur.resize(image.size)
         tmp = img_name.split('.')
         tmp[-2] = tmp[-2] + '-rm'
         output_name = '.'.join(tmp)

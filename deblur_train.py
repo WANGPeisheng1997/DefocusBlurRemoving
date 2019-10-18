@@ -8,7 +8,6 @@ from torch import optim
 import time
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def train(args, model, device, defocus_blur_dataloader, optimizer, epoch):
     train_start_time = time.time()
@@ -48,8 +47,9 @@ def main():
     parser.add_argument('--saving-path', type=str, default='models', help='where to save the model')
 
     args = parser.parse_args()
+    os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu_id
     use_cuda = not args.cpu and torch.cuda.is_available()
-    device = torch.device("cuda:%d" % args.gpu_id if use_cuda else "cpu")
+    device = torch.device("cuda:0" if use_cuda else "cpu")
     kwargs = {'num_workers': 4, 'pin_memory': True} if use_cuda else {}
 
     path = "data/HighResolutionImage"

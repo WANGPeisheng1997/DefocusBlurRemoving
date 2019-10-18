@@ -23,8 +23,13 @@ def random_crop(img, gt, size):
 def add_blur(image, mask):
     cv_img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
     sigma = random.uniform(0.5, 8.0)
-    dst_img = cv2.GaussianBlur(cv_img, (0, 0), sigma)
-    blur_img = dst_img * mask + cv_img * (1 - mask)
+    dst_img_1 = cv2.GaussianBlur(cv_img, (0, 0), sigma)
+    sigma = random.uniform(0.1, 3.0)
+    dst_img_2 = cv2.GaussianBlur(cv_img, (0, 0), sigma)
+    if random.random() < 0.5:
+        blur_img = dst_img_1 * mask + dst_img_2 * (1 - mask)
+    else:
+        blur_img = dst_img_1
     blur_img = blur_img.astype("uint8")
     pil_img = Image.fromarray(cv2.cvtColor(blur_img, cv2.COLOR_BGR2RGB))
     return pil_img
@@ -138,11 +143,12 @@ class HighResolutionDataset(Dataset):
 
 
 if __name__ == '__main__':
-    # dataset = HighResolutionDataset("data/HighResolutionImage")
-    # mask = dataset.random_mask(5,5)
-    # print(mask)
-    image = Image.open("data/HighResolutionImage/0002.png")
-    width, height = image.size
-    mask = random_mask(height, width)
-    blur_image = add_blur(image, mask)
-    blur_image.save("test.png")
+    dataset = HighResolutionDataset("data/HighResolutionImage")
+    blur, gt = dataset[0]
+    blur.show()
+    gt.show()
+    # image = Image.open("data/HighResolutionImage/0002.png")
+    # width, height = image.size
+    # mask = random_mask(height, width)
+    # blur_image = add_blur(image, mask)
+    # blur_image.save("test.png")

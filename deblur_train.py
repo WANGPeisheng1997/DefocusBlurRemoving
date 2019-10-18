@@ -47,7 +47,7 @@ def main():
     parser.add_argument('--saving-path', type=str, default='models', help='where to save the model')
 
     args = parser.parse_args()
-    os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu_id
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
     use_cuda = not args.cpu and torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
     kwargs = {'num_workers': 4, 'pin_memory': True} if use_cuda else {}

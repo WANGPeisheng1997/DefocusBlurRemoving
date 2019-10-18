@@ -24,7 +24,7 @@ def add_blur(image, mask):
     cv_img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
     sigma = random.uniform(0.5, 8.0)
     dst_img_1 = cv2.GaussianBlur(cv_img, (0, 0), sigma)
-    sigma = random.uniform(0.1, 3.0)
+    sigma = random.uniform(0, 3.0)
     dst_img_2 = cv2.GaussianBlur(cv_img, (0, 0), sigma)
     if random.random() < 0.5:
         blur_img = dst_img_1 * mask + dst_img_2 * (1 - mask)
@@ -128,11 +128,18 @@ class HighResolutionDataset(Dataset):
         self._root = path
         self.image_files = [x.path for x in os.scandir(self._root) if
                             x.name.endswith(".jpg") or x.name.endswith(".png") or x.name.endswith(".JPG")]
+        self._transform = transforms.Compose([transforms.Resize(1024),
+                                              transforms.RandomCrop(512)
+                                              ])
 
     def __getitem__(self, index):
         image = Image.open(self.image_files[index])
-        gt_image = image.resize((256, 256))
-        mask = random_mask(256, 256)
+        w, h = image.size
+        if w > 1024 and h > 1024:
+            gt_image = self._transform(image)
+        else:
+            gt_image = transforms.RandomCrop(512)(image)
+        mask = random_mask(512, 512)
         blur_image = add_blur(gt_image, mask)
         blur_image = transforms.ToTensor()(blur_image)
         gt_image = transforms.ToTensor()(gt_image)

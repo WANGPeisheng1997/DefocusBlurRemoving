@@ -45,15 +45,19 @@ def main():
     use_cuda = not args.cpu and torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
-    transform = transforms.Compose([transforms.Resize((1024, 1536)),
-                                    transforms.ToTensor(),
-                                    ])
-
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
     img_names = sorted(os.listdir(args.input_path))
     for img_name in img_names:
         image = Image.open(os.path.join(args.input_path, img_name))
+        if image.size[0] > image.size[1]:
+            transform = transforms.Compose([transforms.Resize((1024, 1536)),
+                                            transforms.ToTensor(),
+                                            ])
+        else:
+            transform = transforms.Compose([transforms.Resize((1536, 1024)),
+                                            transforms.ToTensor(),
+                                            ])
         deblur = deblur_defocus_image(args, image, device, transform)
         deblur = deblur.resize(image.size)
         tmp = img_name.split('.')

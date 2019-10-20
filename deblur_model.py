@@ -121,17 +121,19 @@ from torchvision import transforms
 from torch import nn
 
 if __name__ == '__main__':
+    '''
     net = DeblurNet()
     print(net)
     # mini-batches of 3-channel RGB images of shape (3 x H x W), where H and W are expected to be at least 224.
     # The images have to be loaded in to a range of [0, 1] and then normalized using mean = [0.485, 0.456, 0.406] and std = [0.229, 0.224, 0.225]
     features = net.forward(torch.randn(8, 3, 224, 224))
     print(features.size())  # 8 * 3 * 224 * 224
-    # image1 = Image.open("test.png")
-    # image2 = Image.open("data/HighResolutionImage/0002.png")
-    # tensor1 = transforms.ToTensor()(image1)
-    # tensor2 = transforms.ToTensor()(image2)
-    # print(tensor1)
-    # print(tensor2)
-    # crit = nn.MSELoss()
-    # print(crit(tensor1, tensor2))
+    '''
+    image1 = Image.open("test4.png")
+    image2 = Image.open("test4-rm.png")
+    tensor1 = transforms.ToTensor()(image1)
+    tensor2 = transforms.ToTensor()(image2)
+    print(tensor1)
+    print(tensor2)
+    crit = nn.MSELoss()
+    print(crit(tensor1, tensor2))

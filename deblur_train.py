@@ -27,6 +27,12 @@ def train(args, model, device, defocus_blur_dataloader, optimizer, epoch):
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
 
 
+def load_network(args, network, device):
+    save_path = os.path.join(args.saving_path, 'remove_%d.pt' % args.which_epoch)
+    network.load_state_dict(torch.load(save_path, map_location=device))
+    return network
+
+
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='Defocus Blur Removing')
@@ -45,6 +51,7 @@ def main():
     parser.add_argument('--saving-interval', type=int, default=5, metavar='N',
                         help='how many epochs to wait before saving model')
     parser.add_argument('--saving-path', type=str, default='models', help='where to save the model')
+    parser.add_argument('--which-epoch', type=int, default=0, help='which model to load')
 
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -57,9 +64,11 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
 
     model = DeblurNet().to(device)
+    if args.which_epoch > 0:
+        model = load_network(args, model, device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(args.which_epoch + 1, args.which_epoch + args.epochs + 1):
         train(args, model, device, train_dataloader, optimizer, epoch)
         if epoch % args.saving_interval == 0:
             torch.save(model.state_dict(), os.path.join(args.saving_path, "remove_%d.pt" % epoch))

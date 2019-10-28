@@ -20,16 +20,58 @@ def random_crop(img, gt, size):
     return img, gt
 
 
+def get_disk_kernel(r):
+    w = 2 * r + 1
+    c = r
+    kernel = numpy.zeros([w, w], numpy.float32)
+    for x in range(r + 1):
+        for y in range(r + 1):
+            if x * x + y * y <= r * r:
+                kernel[c + x, c + y] = 1.0
+                kernel[c + x, c - y] = 1.0
+                kernel[c - x, c + y] = 1.0
+                kernel[c - x, c - y] = 1.0
+    return kernel/numpy.sum(numpy.sum(kernel))
+
+
+def gasuss_noise(img, mean=0, var=1):
+    noise = numpy.random.normal(mean, var ** 0.5, img.shape)
+    out = img + noise
+    # print(noise)
+    out = numpy.clip(out, 0, 255)
+    return out
+
+
+def precompute_disk_kernel(lst):
+    ret_dict = {}
+    for r in lst:
+        ret_dict[r] = get_disk_kernel(r)
+    return ret_dict
+
+kernel_dict = precompute_disk_kernel(list(range(1,24)))
+
 def add_blur(image, mask):
     cv_img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
-    sigma = random.uniform(0.5, 8.0)
-    dst_img_1 = cv2.GaussianBlur(cv_img, (0, 0), sigma)
-    sigma = random.uniform(0, 3.0)
-    dst_img_2 = cv2.GaussianBlur(cv_img, (0, 0), sigma)
-    if random.random() < 0.5:
+    case = random.randint(1, 4)
+    radius_1 = random.randint(2, 17)
+    radius_2 = random.randint(3, 10)
+    if case == 1:
+        blur_img = cv2.filter2D(cv_img, -1, kernel_dict[radius_1])
+    elif case == 2:
+        dst_img_1 = cv2.filter2D(cv_img, -1, kernel_dict[radius_1])
+        dst_img_2 = cv2.filter2D(cv_img, -1, kernel_dict[radius_2])
+        blur_img = dst_img_1 * mask + dst_img_2 * (1 - mask)
+    elif case == 3:
+        dst_img_1 = cv2.filter2D(cv_img, -1, kernel_dict[radius_1])
+        dst_img_2 = cv_img
         blur_img = dst_img_1 * mask + dst_img_2 * (1 - mask)
     else:
-        blur_img = dst_img_1
+        sigma = random.uniform(0.5, 8.0)
+        dst_img_1 = cv2.GaussianBlur(cv_img, (0, 0), sigma)
+        sigma = random.uniform(0, 3.0)
+        dst_img_2 = cv2.GaussianBlur(cv_img, (0, 0), sigma)
+        blur_img = dst_img_1 * mask + dst_img_2 * (1 - mask)
+    blur_img = gasuss_noise(blur_img)
     blur_img = blur_img.astype("uint8")
     pil_img = Image.fromarray(cv2.cvtColor(blur_img, cv2.COLOR_BGR2RGB))
     return pil_img
@@ -141,21 +183,59 @@ class HighResolutionDataset(Dataset):
             gt_image = transforms.RandomCrop(512)(image)
         mask = random_mask(512, 512)
         blur_image = add_blur(gt_image, mask)
-        blur_image = transforms.ToTensor()(blur_image)
-        gt_image = transforms.ToTensor()(gt_image)
+        # blur_image = transforms.ToTensor()(blur_image)
+        # gt_image = transforms.ToTensor()(gt_image)
         return blur_image, gt_image
 
     def __len__(self):
         return len(self.image_files)
 
 
+class RealDefocusDataset(Dataset):
+
+    def __init__(self, path):
+        self._root = path
+        self._sharp_path = os.path.join(path, "sharp_image")
+        self._blur_path = os.path.join(path, "blur_image")
+
+    def __getitem__(self, index):
+        sharp_image_path = os.path.join(self._sharp_path, str(index))
+        sharp_image_files = [x.path for x in os.scandir(sharp_image_path) if
+                             x.name.endswith(".jpg") or x.name.endswith(".png") or x.name.endswith(".JPG")]
+        blur_image_path = os.path.join(self._blur_path, str(index))
+        blur_image_files = [x.path for x in os.scandir(blur_image_path) if
+                            x.name.endswith(".jpg") or x.name.endswith(".png") or x.name.endswith(".JPG")]
+
+        sharp_image = Image.open(sharp_image_files[0])
+        random.shuffle(blur_image_files)
+        blur_image = Image.open(blur_image_files[0])
+
+        w, h = sharp_image.size
+        if w > 1024 and h > 1024:
+            sharp_image = transforms.Resize(1024)(sharp_image)
+            blur_image = transforms.Resize(1024)(blur_image)
+            sharp_image, blur_image = random_crop(sharp_image, blur_image, 512)
+        else:
+            sharp_image, blur_image = random_crop(sharp_image, blur_image, 512)
+
+        sharp_image = transforms.ToTensor()(sharp_image)
+        blur_image = transforms.ToTensor()(blur_image)
+        return blur_image, sharp_image
+
+    def __len__(self):
+        return 61
+
+
 if __name__ == '__main__':
-    dataset = HighResolutionDataset("data/HighResolutionImage")
-    blur, gt = dataset[0]
+    dataset = RealDefocusDataset("new_defocus_dataset")
+    blur, gt = dataset[25]
     blur.show()
     gt.show()
-    # image = Image.open("data/HighResolutionImage/0002.png")
+
+    # image = Image.open("data/HighResolutionImage/0004.png")
+    # image = transforms.Resize(1204)(image)
+    # image = transforms.RandomCrop(512)(image)
     # width, height = image.size
     # mask = random_mask(height, width)
     # blur_image = add_blur(image, mask)
-    # blur_image.save("test.png")
+    # blur_image.save("test4.png")

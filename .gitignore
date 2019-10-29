@@ -121,3 +121,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+data/
+new_defocus_dataset/
+models/

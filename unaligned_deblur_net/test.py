@@ -1,13 +1,15 @@
 import argparse
 import torch
-from deblur_model import DeblurNet
+from unaligned_deblur_net.model import DeblurNet
 import os
 from torchvision import transforms
 from PIL import Image
+from utils.operations import resize_to_multiple_of_k
+import time
 
 
 def load_network(args, network, device):
-    save_path = os.path.join(args.saving_path, 'real_remove_%d.pt' % args.which_epoch)
+    save_path = os.path.join(args.saving_path, 'unaligned_%d.pt' % args.which_epoch)
     network.load_state_dict(torch.load(save_path, map_location=device))
     return network
 
@@ -29,16 +31,14 @@ def deblur_defocus_image(args, image, device, transform):
 def main():
     parser = argparse.ArgumentParser(description='Defocus Blur Removing')
     parser.add_argument('--cpu', action='store_true', default=False,
-                        help='disables CUDA training')
-    parser.add_argument('--resize', action='store_true', default=False,
-                        help='directly resize to 224*224')
+                        help='disables CUDA testing')
     parser.add_argument('--gpu-id', type=int, default=0, metavar='N',
                         help='id of the gpu')
     parser.add_argument('--which-epoch', type=int, default=15, metavar='N',
                         help='which model to use')
     parser.add_argument('--input-path', type=str, default='defocus_images', help='test folder')
     parser.add_argument('--output-path', type=str, default='deblur_images', help='result folder')
-    parser.add_argument('--saving-path', type=str, default='models', help='where is the model')
+    parser.add_argument('--saving-path', type=str, default='models/unaligned_deblur', help='where is the model')
 
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu_id
@@ -48,22 +48,27 @@ def main():
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
     img_names = sorted(os.listdir(args.input_path))
+
+    total_time = 0
+
     for img_name in img_names:
         image = Image.open(os.path.join(args.input_path, img_name))
-        if image.size[0] > image.size[1]:
-            transform = transforms.Compose([transforms.Resize((1024, 1536)),
-                                            transforms.ToTensor(),
-                                            ])
-        else:
-            transform = transforms.Compose([transforms.Resize((1536, 1024)),
-                                            transforms.ToTensor(),
-                                            ])
-        deblur = deblur_defocus_image(args, image, device, transform)
+        image_resize = resize_to_multiple_of_k(image, 32)
+        transform = transforms.ToTensor()
+
+        time_start = time.time()
+        deblur = deblur_defocus_image(args, image_resize, device, transform)
+        processing_time = time.time() - time_start
+        total_time += processing_time
+
         deblur = deblur.resize(image.size)
         tmp = img_name.split('.')
         tmp[-2] = tmp[-2] + '-rm'
         output_name = '.'.join(tmp)
         deblur.save(os.path.join(args.output_path, output_name))
+        print('Saving results: %s ... %4.3fs' % (os.path.join(args.output_path, output_name), processing_time))
+
+    print("Average Processing Time: %4.3fs" % (total_time / len(img_names)))
 
 
 if __name__ == '__main__':

@@ -30,8 +30,6 @@ def main():
     parser = argparse.ArgumentParser(description='Defocus Blur Removing')
     parser.add_argument('--cpu', action='store_true', default=False,
                         help='disables CUDA training')
-    parser.add_argument('--resize', action='store_true', default=False,
-                        help='directly resize to 224*224')
     parser.add_argument('--gpu-id', type=int, default=0, metavar='N',
                         help='id of the gpu')
     parser.add_argument('--which-epoch', type=int, default=15, metavar='N',
@@ -50,15 +48,12 @@ def main():
     img_names = sorted(os.listdir(args.input_path))
     for img_name in img_names:
         image = Image.open(os.path.join(args.input_path, img_name))
-        if image.size[0] > image.size[1]:
-            transform = transforms.Compose([transforms.Resize((1024, 1536)),
-                                            transforms.ToTensor(),
-                                            ])
-        else:
-            transform = transforms.Compose([transforms.Resize((1536, 1024)),
-                                            transforms.ToTensor(),
-                                            ])
-        deblur = deblur_defocus_image(args, image, device, transform)
+        width, height = image.size
+        new_height = int(height // 32 * 32)
+        new_width = int(width // 32 * 32)
+        image_resize = image.resize((new_width, new_height))
+        transform = transforms.Compose([transforms.ToTensor()])
+        deblur = deblur_defocus_image(args, image_resize, device, transform)
         deblur = deblur.resize(image.size)
         tmp = img_name.split('.')
         tmp[-2] = tmp[-2] + '-rm'

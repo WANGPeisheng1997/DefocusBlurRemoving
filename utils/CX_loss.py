@@ -1,23 +1,28 @@
 import sys
-sys.path.append('../')
-
 import torch
 import torch.nn as nn
-from VGG_model import VGG_Model
+from utils.VGG_model import VGG_Model
 import torch.nn.functional as F
 from PIL import Image
 from torchvision.transforms import transforms
+
+
+sys.path.append('../')
+
 
 class Distance_Type:
     L2_Distance = 0
     L1_Distance = 1
     Cosine_Distance = 2
 
+
 """
 config file is a dict.
 layers_weights: dict, e.g., {'conv_1_1': 1.0, 'conv_3_2': 1.0}
 crop_quarter: boolean
 """
+
+
 class Contextual_Loss(nn.Module):
     def __init__(self, layers_weights, crop_quarter=False, max_1d_size=100, distance_type=Distance_Type.Cosine_Distance, b=1.0, h=0.1, cuda=True):
         super(Contextual_Loss, self).__init__()
@@ -38,7 +43,6 @@ class Contextual_Loss(nn.Module):
         self.max_1d_size = max_1d_size
         self.b = b
         self.h = h
-
 
     def forward(self, images, gt):
         if images.device.type == 'cpu':
@@ -268,13 +272,11 @@ class Contextual_Loss(nn.Module):
         return CX_loss
 
 
-
 if __name__ == '__main__':
     layers = {
             "conv_1_1": 1.0,
             "conv_3_2": 1.0
         }
-
 
     image1 = Image.open("gt.png")
     image2 = Image.open("1.png")

@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 import argparse
 import torch
 from unaligned_deblur_net.model import DeblurNet
@@ -6,6 +9,9 @@ from torchvision import transforms
 from PIL import Image
 from utils.operations import resize_to_multiple_of_k
 import time
+
+
+sys.path.append('../')
 
 
 def load_network(args, network, device):
@@ -36,9 +42,9 @@ def main():
                         help='id of the gpu')
     parser.add_argument('--which-epoch', type=int, default=15, metavar='N',
                         help='which model to use')
-    parser.add_argument('--input-path', type=str, default='defocus_images', help='test folder')
-    parser.add_argument('--output-path', type=str, default='deblur_images', help='result folder')
-    parser.add_argument('--saving-path', type=str, default='models/unaligned_deblur', help='where is the model')
+    parser.add_argument('--input-path', type=str, default='../defocus_images', help='test folder')
+    parser.add_argument('--output-path', type=str, default='../deblur_images', help='result folder')
+    parser.add_argument('--saving-path', type=str, default='../models/unaligned', help='where is the model')
 
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu_id

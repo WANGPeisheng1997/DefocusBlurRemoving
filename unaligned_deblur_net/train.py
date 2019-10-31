@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 import argparse
 import torch
 from torch.utils.data import DataLoader
@@ -7,9 +10,8 @@ from unaligned_deblur_net.model import DeblurNet
 from torch import optim
 import time
 import os
-# import contextual_loss as cl
-import torch.nn.functional as F
 from utils.CX_loss import Contextual_Loss
+from torch.utils.tensorboard import SummaryWriter
 
 
 def train(args, model, device, dataloader, optimizer, epoch):
@@ -21,18 +23,18 @@ def train(args, model, device, dataloader, optimizer, epoch):
         optimizer.zero_grad()
         output = model(data)
         criterion = Contextual_Loss({
-            "conv_1_1": 1.0,
+            "conv_1_2": 1.0,
+            "conv_2_2": 1.0,
             "conv_3_2": 1.0
-        }, max_1d_size=64).to(device)
-        # output = F.interpolate(output, size=[128, 128], mode="bilinear")
-        # target = F.interpolate(target, size=[128, 128], mode="bilinear")
+        }, max_1d_size=64, feature_weight=args.w, device=device).to(device)
         loss = criterion(output, target)
         train_loss += float(loss.item()) * data.shape[0]
         loss.backward()
         optimizer.step()
     training_time = time.time() - train_start_time
     print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / len(dataloader.dataset)))
-    print('Training complete in {:.0f}m {:.0f}s'.format(train // 60, training_time % 60))
+    print('Training complete in {:.0f}m {:.0f}s'.format(training_time // 60, training_time % 60))
+    return train_loss / len(dataloader.dataset)
 
 
 def validate(args, model, device, dataloader):
@@ -43,17 +45,19 @@ def validate(args, model, device, dataloader):
             data, target = data.to(device), target.to(device)
             output = model(data)
             criterion = Contextual_Loss({
-                "conv_1_1": 1.0,
+                "conv_1_2": 1.0,
+                "conv_2_2": 1.0,
                 "conv_3_2": 1.0
-            }, max_1d_size=64).to(device)
+            }, max_1d_size=64, feature_weight=args.w, device=device).to(device)
             loss = criterion(output, target).item()
             val_loss += float(loss) * data.shape[0]
     val_loss /= len(dataloader.dataset)
-    print('Val Set Contextual Loss: {:.4f}'.format(test_loss))
+    print('Val Set Contextual Loss: {:.4f}'.format(val_loss))
+    return val_loss
 
 
 def load_network(args, network, device):
-    save_path = os.path.join(args.saving_path, 'unaligned_%d.pt' % args.which_epoch)
+    save_path = os.path.join(args.saving_path, 'unaligned_%f_%d.pt' % (args.w, args.which_epoch))
     network.load_state_dict(torch.load(save_path, map_location=device))
     return network
 
@@ -73,9 +77,11 @@ def main():
                         help='id of the gpu')
     parser.add_argument('--saving-interval', type=int, default=5, metavar='N',
                         help='how many epochs to wait before saving model')
-    parser.add_argument('--data-path', type=str, default='data/', help='where is the dataset')
-    parser.add_argument('--saving-path', type=str, default='models/unaligned', help='where to save the model')
+    parser.add_argument('--train-path', type=str, default='../fudan_dataset/train', help='where is the training set')
+    parser.add_argument('--test-path', type=str, default='../fudan_dataset/test', help='where is the validating set')
+    parser.add_argument('--saving-path', type=str, default='../models/unaligned', help='where to save the model')
     parser.add_argument('--which-epoch', type=int, default=0, help='which model to continue training')
+    parser.add_argument('--w', type=float, default=0.05, help='feature weight')
 
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -83,22 +89,27 @@ def main():
     device = torch.device("cuda:0" if use_cuda else "cpu")
     kwargs = {'num_workers': 4, 'pin_memory': True} if use_cuda else {}
 
-    path = args.data_path
-    train_dataset = FudanDefocusTrainDataset(path, 62)
+    train_path = args.train_path
+    test_path = args.test_path
+    train_dataset = FudanDefocusTrainDataset(train_path, 128)
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
-    val_dataset = FudanDefocusTestDataset(path, 100)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    val_dataset = FudanDefocusTestDataset(test_path, 8)
+    val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, **kwargs)
 
     model = DeblurNet().to(device)
     if args.which_epoch > 0:
         model = load_network(args, model, device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
+    writer = SummaryWriter()
+
     for epoch in range(args.which_epoch + 1, args.which_epoch + args.epochs + 1):
-        train(args, model, device, train_dataloader, optimizer, epoch)
+        train_loss = train(args, model, device, train_dataloader, optimizer, epoch)
         if epoch % args.saving_interval == 0:
-            torch.save(model.state_dict(), os.path.join(args.saving_path, 'unaligned_%d.pt' % epoch))
-        validate(args, model, device, val_dataloader)
+            torch.save(model.state_dict(), os.path.join(args.saving_path, 'unaligned_%f_%d.pt' % (args.w, epoch)))
+        val_loss = validate(args, model, device, val_dataloader)
+        writer.add_scalar('Loss/train', train_loss, epoch)
+        writer.add_scalar('Loss/validate', val_loss, epoch)
 
 
 if __name__ == '__main__':

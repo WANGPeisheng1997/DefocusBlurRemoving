@@ -125,3 +125,5 @@ dmypy.json
 data/
 new_defocus_dataset/
 models/
+fudan_dataset/
+temp_testing_images/

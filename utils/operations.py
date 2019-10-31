@@ -28,4 +28,3 @@ def crop_to_multiple_of_k(image, k):
     new_width = int(width // k * k)
     image_crop = image.crop((0, 0, new_width, new_height))
     return image_crop
-

@@ -20,13 +20,15 @@ class FudanDefocusTrainDataset(Dataset):
 
     def __getitem__(self, index):
         sharp_image_path = os.path.join(self._sharp_path, str(index))
-        sharp_image_files = [x.path for x in os.scandir(sharp_image_path) if
+        sharp_image_files = [x for x in os.scandir(sharp_image_path) if
                              x.name.endswith(".jpg") or x.name.endswith(".png") or x.name.endswith(".JPG")]
-        sharp_image_count = len(sharp_image_files)
         # get a random cropped sharp image:
-        sharp_random_index = random.randint(0, sharp_image_count - 1)
-        sharp_image = Image.open(sharp_image_files[sharp_random_index])
-        print(sharp_image_files[sharp_random_index])
+        random.shuffle(sharp_image_files)
+        sharp_random_image_name = sharp_image_files[0].name
+        sharp_random_index = int(sharp_random_image_name.split("_")[1])
+        sharp_random_image_path = sharp_image_files[0].path
+        sharp_image = Image.open(sharp_random_image_path)
+        # print(sharp_random_image_path)
 
         # all the crops
         blur_image_path = os.path.join(self._blur_path, str(index))
@@ -36,7 +38,7 @@ class FudanDefocusTrainDataset(Dataset):
                             x.name.endswith(".jpg") or x.name.endswith(".png") or x.name.endswith(".JPG")]
         random.shuffle(blur_image_files)
         blur_image = Image.open(blur_image_files[0])
-        print(blur_image_files[0])
+        # print(blur_image_files[0])
 
         # w, h = sharp_image.size
         # if w > 1024 and h > 1024:

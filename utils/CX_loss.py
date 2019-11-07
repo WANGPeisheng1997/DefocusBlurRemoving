@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from PIL import Image
 from torchvision.transforms import transforms
 
+import time
 
 class Distance_Type:
     L2_Distance = 0
@@ -35,8 +36,10 @@ class Contextual_Loss(nn.Module):
         self.bilateral = bilateral
         self.feature_weight = feature_weight
         self.device = device
+        self.pre_compute_L2 = None
 
     def forward(self, images, gt):
+
         if images.device.type == 'cpu':
             loss = torch.zeros(1)
             vgg_images = self.vgg_pred(images)
@@ -62,6 +65,11 @@ class Contextual_Loss(nn.Module):
 
             loss_t = self.calculate_CX_Loss(vgg_images[key], vgg_gt[key])
             loss += loss_t * self.layers_weights[key]
+
+        # adp = nn.AdaptiveAvgPool2d((64, 64))
+        # loss_rgb = self.calculate_CX_Loss(adp(images), adp(gt))
+        # loss += loss_rgb
+
         return loss
 
     @staticmethod
@@ -231,6 +239,9 @@ class Contextual_Loss(nn.Module):
         return relative_dist
 
     def calculate_CX_Loss(self, I_features, T_features):
+
+        calculate_start_time = time.time()
+
         I_features = Contextual_Loss._move_to_current_device(I_features)
         T_features = Contextual_Loss._move_to_current_device(T_features)
 
@@ -243,17 +254,18 @@ class Contextual_Loss(nn.Module):
 
         if self.bilateral:
             b, c, h, w = T_features.size()
-            grid = self._compute_meshgrid((1, c, h, w))
-            L2_distance = self._compute_l2_distance(grid, grid)
-            raw_distance = self.feature_weight * raw_distance + (1 - self.feature_weight) * L2_distance
-        # print(raw_distance)
-        # print(raw_distance.size())
+            if self.pre_compute_L2 is None:
+                grid = self._compute_meshgrid((1, c, h, w))
+                L2_distance = self._compute_l2_distance(grid, grid)
+                self.pre_compute_L2 = L2_distance
+            raw_distance = self.feature_weight * raw_distance + (1 - self.feature_weight) * self.pre_compute_L2
 
         relative_distance = Contextual_Loss._calculate_relative_distance(raw_distance)
         del raw_distance
 
         exp_distance = torch.exp((self.b - relative_distance) / self.h)
         del relative_distance
+
         # Similarity
         contextual_sim = exp_distance / torch.sum(exp_distance, dim=-1, keepdim=True)
         del exp_distance
@@ -264,8 +276,6 @@ class Contextual_Loss(nn.Module):
         CS = torch.mean(max_gt_sim, dim=1)
         CX_loss = torch.mean(-torch.log(CS))
 
-        if torch.isnan(CX_loss):
-            raise ValueError('NaN in computing CX_loss')
         return CX_loss
 
 

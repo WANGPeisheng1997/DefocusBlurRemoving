@@ -1,3 +1,4 @@
+# CUDA_VISIBLE_DEVICES=X python test.py --w 0.05 --which-epoch 100
 import sys
 sys.path.append('../')
 
@@ -15,7 +16,7 @@ sys.path.append('../')
 
 
 def load_network(args, network, device):
-    save_path = os.path.join(args.saving_path, 'unaligned_%d.pt' % args.which_epoch)
+    save_path = os.path.join(args.saving_path, 'unaligned_%f_%d.pt' % (args.w, args.which_epoch))
     network.load_state_dict(torch.load(save_path, map_location=device))
     return network
 
@@ -45,6 +46,7 @@ def main():
     parser.add_argument('--input-path', type=str, default='../defocus_images', help='test folder')
     parser.add_argument('--output-path', type=str, default='../deblur_images', help='result folder')
     parser.add_argument('--saving-path', type=str, default='../models/unaligned', help='where is the model')
+    parser.add_argument('--w', type=float, default=0.05, help='feature weight')
 
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.gpu_id

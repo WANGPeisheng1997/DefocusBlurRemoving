@@ -16,7 +16,7 @@ sys.path.append('../')
 
 
 def load_network(args, network, device):
-    save_path = os.path.join(args.saving_path, 'unaligned_%f_%d.pt' % (args.w, args.which_epoch))
+    save_path = os.path.join(args.saving_path, 'unaligned_%.2f_%d_RGB.pt' % (args.w, args.which_epoch))
     network.load_state_dict(torch.load(save_path, map_location=device))
     return network
 

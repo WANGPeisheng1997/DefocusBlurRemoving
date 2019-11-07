@@ -48,7 +48,7 @@ def validate(args, model, device, dataloader, criterion):
 
 
 def load_network(args, network, device):
-    save_path = os.path.join(args.saving_path, 'unaligned_%f_%d.pt' % (args.w, args.which_epoch))
+    save_path = os.path.join(args.saving_path, 'unaligned_%.2f_%d_RGB.pt' % (args.w, args.which_epoch))
     network.load_state_dict(torch.load(save_path, map_location=device))
     return network
 
@@ -84,8 +84,8 @@ def main():
 
     train_path = args.train_path
     test_path = args.test_path
-    # train_dataset = FudanDefocusTrainDataset(train_path, 128)
-    train_dataset = MixedDefocusTrainDataset(train_path, 128)
+    train_dataset = FudanDefocusTrainDataset(train_path, 128)
+    # train_dataset = MixedDefocusTrainDataset(train_path, 128)
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
     val_dataset = FudanDefocusTestDataset(test_path, 8)
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, **kwargs)
@@ -106,7 +106,7 @@ def main():
     for epoch in range(args.which_epoch + 1, args.which_epoch + args.epochs + 1):
         train_loss = train(args, model, device, train_dataloader, optimizer, epoch, criterion)
         if epoch % args.saving_interval == 0:
-            torch.save(model.state_dict(), os.path.join(args.saving_path, 'unaligned_%f_%d.pt' % (args.w, epoch)))
+            torch.save(model.state_dict(), os.path.join(args.saving_path, 'unaligned_%.2f_%d_RGB.pt' % (args.w, epoch)))
         writer.add_scalar('Loss/train', train_loss, epoch)
         val_loss = validate(args, model, device, val_dataloader, criterion)
         writer.add_scalar('Loss/validate', val_loss, epoch)

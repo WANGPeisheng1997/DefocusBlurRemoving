@@ -18,7 +18,7 @@ class Distance_Type:
 
 class Contextual_Loss(nn.Module):
     def __init__(self, layers_weights, crop_quarter=False, max_1d_size=100, distance_type=Distance_Type.Cosine_Distance,
-                 b=1.0, h=0.1, bilateral=True, feature_weight=0.05, device=None):
+                 b=1.0, h=0.1, bilateral=True, feature_weight=0.05, device=None, add_RGB=True):
         super(Contextual_Loss, self).__init__()
         listen_list = []
         self.layers_weights = {}
@@ -37,6 +37,7 @@ class Contextual_Loss(nn.Module):
         self.feature_weight = feature_weight
         self.device = device
         self.pre_compute_L2 = None
+        self.add_RGB = add_RGB
 
     def forward(self, images, gt):
 
@@ -66,9 +67,16 @@ class Contextual_Loss(nn.Module):
             loss_t = self.calculate_CX_Loss(vgg_images[key], vgg_gt[key])
             loss += loss_t * self.layers_weights[key]
 
-        # adp = nn.AdaptiveAvgPool2d((64, 64))
-        # loss_rgb = self.calculate_CX_Loss(adp(images), adp(gt))
-        # loss += loss_rgb
+        if self.add_RGB:
+            N, C, H, W = images.size()
+            images = images.view(N, C, H // 64, 64, W // 64, 64)
+            images = images.permute(0, 2, 4, 1, 3, 5)
+            images = images.reshape(N * (H // 64) * (W // 64), C, 64, 64)
+            gt = gt.view(N, C, H // 64, 64, W // 64, 64)
+            gt = gt.permute(0, 2, 4, 1, 3, 5)
+            gt = gt.reshape(N * (H // 64) * (W // 64), C, 64, 64)
+            loss_rgb = self.calculate_CX_Loss(images, gt)
+            loss += loss_rgb * 2
 
         return loss
 
@@ -239,8 +247,6 @@ class Contextual_Loss(nn.Module):
         return relative_dist
 
     def calculate_CX_Loss(self, I_features, T_features):
-
-        calculate_start_time = time.time()
 
         I_features = Contextual_Loss._move_to_current_device(I_features)
         T_features = Contextual_Loss._move_to_current_device(T_features)

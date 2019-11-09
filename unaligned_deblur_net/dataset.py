@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import os
 from torchvision import transforms
-from utils.operations import random_crop, crop_to_multiple_of_k, random_mask, add_blur
+from utils.operations import random_crop, crop_to_multiple_of_k, random_mask, add_blur, random_resize, random_flip
 import random
 import sys
 
@@ -38,17 +38,17 @@ class FudanDefocusTrainDataset(Dataset):
                             x.name.endswith(".jpg") or x.name.endswith(".png") or x.name.endswith(".JPG")]
         random.shuffle(blur_image_files)
         blur_image = Image.open(blur_image_files[0])
-        # print(blur_image_files[0])
 
-        # w, h = sharp_image.size
-        # if w > 1024 and h > 1024:
-        #     sharp_image = transforms.Resize(1024)(sharp_image)
-        #     blur_image = transforms.Resize(1024)(blur_image)
-        #     sharp_image, blur_image = random_crop(sharp_image, blur_image, 512)
-        # else:
-        #     sharp_image, blur_image = random_crop(sharp_image, blur_image, 512)
+        # random_scale
+        sharp_image, blur_image = random_resize(sharp_image, blur_image)
+
+        # random flip
+        sharp_image, blur_image = random_flip(sharp_image, blur_image)
+
+        # random crop
         sharp_image, blur_image = random_crop(sharp_image, blur_image, 256)
 
+        # to tensor
         sharp_image = transforms.ToTensor()(sharp_image)
         blur_image = transforms.ToTensor()(blur_image)
         return blur_image, sharp_image
@@ -141,3 +141,12 @@ class FudanDefocusTestDataset(Dataset):
 
     def __len__(self):
         return self._size
+
+
+if __name__ == '__main__':
+    dataset = FudanDefocusTrainDataset("E:/GitHub/DefocusBlurRemoving/fudan_dataset/train", 128)
+    blur, sharp = dataset[2]
+    blur_image = transforms.ToPILImage()(blur)
+    sharp_image = transforms.ToPILImage()(sharp)
+    blur_image.show()
+    sharp_image.show()

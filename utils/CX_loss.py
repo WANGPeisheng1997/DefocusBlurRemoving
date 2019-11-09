@@ -9,6 +9,10 @@ from PIL import Image
 from torchvision.transforms import transforms
 
 import time
+# import inspect
+# from utils.gpu_mem_track import MemTracker
+# frame = inspect.currentframe()  # define a frame to track
+# gpu_tracker = MemTracker(frame)  # define a GPU tracker
 
 class Distance_Type:
     L2_Distance = 0
@@ -39,8 +43,8 @@ class Contextual_Loss(nn.Module):
         self.pre_compute_L2 = None
         self.add_RGB = add_RGB
 
-    def forward(self, images, gt):
 
+    def forward(self, images, gt):
         if images.device.type == 'cpu':
             loss = torch.zeros(1)
             vgg_images = self.vgg_pred(images)
@@ -75,8 +79,20 @@ class Contextual_Loss(nn.Module):
             gt = gt.view(N, C, H // 64, 64, W // 64, 64)
             gt = gt.permute(0, 2, 4, 1, 3, 5)
             gt = gt.reshape(N * (H // 64) * (W // 64), C, 64, 64)
-            loss_rgb = self.calculate_CX_Loss(images, gt)
-            loss += loss_rgb * 2
+            # images_chunk = torch.chunk(images, (H // 64) * (W // 64), dim=0)
+            # gt_chunk = torch.chunk(gt, (H // 64) * (W // 64), dim=0)
+            # for images, gt in zip(images_chunk, gt_chunk):
+            #     loss_rgb = self.calculate_CX_Loss(images, gt)
+            #     loss += loss_rgb * 2 / ((H // 64) * (W // 64))
+            #     del loss_rgb
+
+            chunk_size = N * (H // 64) * (W // 64)
+            images_chunk = torch.chunk(images, chunk_size, dim=0)
+            gt_chunk = torch.chunk(gt, chunk_size, dim=0)
+            for images, gt in zip(images_chunk, gt_chunk):
+                loss_rgb = self.calculate_CX_Loss(images, gt)
+                loss += loss_rgb * 10 / chunk_size
+                del loss_rgb
 
         return loss
 
@@ -203,6 +219,7 @@ class Contextual_Loss(nn.Module):
             I_features_i = I_features[i].unsqueeze(0)
             dist = F.conv2d(I_features_i, T_features_i).permute(0, 2, 3, 1).contiguous()
             cosine_dist.append(dist)
+            # print(dist.size())
         cosine_dist = torch.cat(cosine_dist, dim=0)
         cosine_dist = (1 - cosine_dist) / 2
         cosine_dist = cosine_dist.clamp(min=0.0)
@@ -229,6 +246,7 @@ class Contextual_Loss(nn.Module):
 
         A = y_vec.transpose(1, 2) @ x_vec
         dist = y_s - 2 * A + x_s.transpose(0, 1)
+        del A
         dist = dist.transpose(1, 2).reshape(N, H, W, H * W)
         dist = dist.clamp(min=0.)
 
@@ -247,7 +265,6 @@ class Contextual_Loss(nn.Module):
         return relative_dist
 
     def calculate_CX_Loss(self, I_features, T_features):
-
         I_features = Contextual_Loss._move_to_current_device(I_features)
         T_features = Contextual_Loss._move_to_current_device(T_features)
 
@@ -263,8 +280,10 @@ class Contextual_Loss(nn.Module):
             if self.pre_compute_L2 is None:
                 grid = self._compute_meshgrid((1, c, h, w))
                 L2_distance = self._compute_l2_distance(grid, grid)
-                self.pre_compute_L2 = L2_distance
-            raw_distance = self.feature_weight * raw_distance + (1 - self.feature_weight) * self.pre_compute_L2
+                self.pre_compute_L2 = (1 - self.feature_weight) * L2_distance
+            weighted_distance = self.feature_weight * raw_distance
+            raw_distance = weighted_distance + self.pre_compute_L2
+            del weighted_distance
 
         relative_distance = Contextual_Loss._calculate_relative_distance(raw_distance)
         del raw_distance
@@ -280,7 +299,10 @@ class Contextual_Loss(nn.Module):
         del contextual_sim
 
         CS = torch.mean(max_gt_sim, dim=1)
+        del max_gt_sim
+
         CX_loss = torch.mean(-torch.log(CS))
+        torch.cuda.empty_cache()
 
         return CX_loss
 

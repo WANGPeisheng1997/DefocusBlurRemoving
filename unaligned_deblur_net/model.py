@@ -70,7 +70,7 @@ class UpBlock(nn.Module):
         self.res_2 = ResnetBlock(num_filter=in_channels)
         self.res_3 = ResnetBlock(num_filter=in_channels)
         self.deconv = nn.ConvTranspose2d(in_channels=in_channels, out_channels=in_channels // 2, kernel_size=(4, 4),
-                                         stride=(2, 2), padding=(1, 1), bias=False)
+                                         stride=(2, 2), padding=(1, 1), bias=True)
 
     def forward(self, x):
         x = self.res_1(x)

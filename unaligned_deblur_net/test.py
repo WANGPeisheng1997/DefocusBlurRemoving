@@ -16,7 +16,7 @@ sys.path.append('../')
 
 
 def load_network(args, network, device):
-    save_path = os.path.join(args.saving_path, 'unaligned_%.2f_%d_RGB.pt' % (args.w, args.which_epoch))
+    save_path = os.path.join(args.saving_path, 'unaligned_%.2f_%d_no_RGB.pt' % (args.w, args.which_epoch))
     network.load_state_dict(torch.load(save_path, map_location=device))
     return network
 
@@ -61,7 +61,9 @@ def main():
 
     for img_name in img_names:
         image = Image.open(os.path.join(args.input_path, img_name))
-        image_resize = resize_to_multiple_of_k(image, 32)
+        w, h = image.size
+        image_resize = image.resize((w//1, h//1))
+        image_resize = resize_to_multiple_of_k(image_resize, 32)
         transform = transforms.ToTensor()
 
         time_start = time.time()

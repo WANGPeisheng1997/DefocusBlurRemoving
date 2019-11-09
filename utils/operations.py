@@ -3,6 +3,7 @@ import cv2
 import numpy
 from PIL import Image
 from scipy import interpolate
+from torchvision import transforms
 
 
 def random_crop(img, gt, size):
@@ -15,6 +16,23 @@ def random_crop(img, gt, size):
     region = (x, y, x + size, y + size)
     img = img.crop(region)
     gt = gt.crop(region)
+    return img, gt
+
+
+def random_flip(img, gt, p=0.5):
+    if random.random() < p:
+        img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        gt = gt.transpose(Image.FLIP_LEFT_RIGHT)
+    return img, gt
+
+
+def random_resize(img, gt, scale_min=2, scale_max=4, min_size=256):
+    width, height = img.size
+    smaller = min(width, height)
+    scale = random.uniform(scale_min, scale_max)
+    new_smaller = max(int(smaller/scale), min_size)
+    img = transforms.Resize(new_smaller)(img)
+    gt = transforms.Resize(new_smaller)(gt)
     return img, gt
 
 
